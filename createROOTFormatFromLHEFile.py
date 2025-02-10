@@ -14,7 +14,7 @@ class LHEToRootConversor(object):
     # Load lhe file
     self.lhefile = lhefile
     self.inp     = gzip.open(self.lhefile,"rb")
-    print "Loading whole LHE file, this might take a while..."
+    print("Loading whole LHE file, this might take a while...")
     self.thelines = self.inp.readlines()
     self.dictEntries = dictEntries
     self.defaults = defaults
@@ -49,7 +49,7 @@ class LHEToRootConversor(object):
       iL += 1
       if "<event" in l: #Start reading event
         iev += 1
-        print "Processing event (total number estimated) ... %i/%i"%(iev, (totL)/(iL/iev) )
+        print("Processing event (total number estimated) ... %i/%i"%(iev, (totL)/(iL/iev) ))
         readEvent = True
         self.ret = copy.copy(self.branchPointers)
  
@@ -88,13 +88,14 @@ class LHEToRootConversor(object):
 
   def loadWeightDefs(self):
     # Read weight definition from the banner to later save it
-    print "Finding weights in banner...."
+    print("Finding weights in banner....")
     readingBlock  = False
     readingWeight = False
     self.weightVars = {}
     iL = 0
     for l in self.thelines:
       #This will get the parameter definitions from the banner
+      l = l.decode()
       if "weightgroup name='mg_reweighting'" in l:
         readingBlock = True
       if readingBlock:
@@ -113,13 +114,13 @@ class LHEToRootConversor(object):
           self.weightVars[currentWeightName][mod + " " + entry] = float(value)
         if "</weight>" in l:
           readingWeight = False
-          print currentWeightName, self.weightVars[currentWeightName]
+          print(currentWeightName, self.weightVars[currentWeightName])
           if all([self.weightVars[currentWeightName][k] == 0 for k in self.weightVars[currentWeightName]]):
             self.central = int(currentWeightName.replace("rwgt_",""))-1
-            print "Found all parameters at 0 (SM-like candidate) at weight %s"%currentWeightName
+            print("Found all parameters at 0 (SM-like candidate) at weight %s"%currentWeightName)
 
 for df in os.listdir("output"):
-  print  "Processing file...", df
+  print("Processing file...", df)
   if "root" in df: continue
   if os.path.isfile("output/"+df.replace(".lhe.gz",".root")): continue
   LHEToRootConversor("output/" + df, {"dim6 1":"cwww","dim6 2":"cw","dim6 3":"cb", "dim6 4":"cPwww","dim6 5":"cPw", "dim6 6":"cPhid","dim6 7":"cPhiW","dim6 8":"cPhib"}, {"dim6 1":3,"dim6 2":4,"dim6 3":150, "dim6 4":100,"dim6 5":100, "dim6 6":100,"dim6 7":100,"dim6 8":100})

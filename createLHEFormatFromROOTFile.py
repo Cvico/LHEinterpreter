@@ -55,7 +55,7 @@ class LHEPrinter(object):
       self.output = open(self.outputLHE+"chunk0","w")
       chunk = 0
 
-    print "Processing %i events, please wait..."%totalEvents
+    print("Processing %i events, please wait..."%totalEvents)
     iEv = 0
     pEv = 0
     chunk = 0
@@ -67,7 +67,7 @@ class LHEPrinter(object):
         chunk += 1 
         self.output.close()
         self.output = open(self.outputLHE+"chunk%i"%chunk,"w")
-      print "...Event %i/%i"%(iEv, totalEvents)
+      print("...Event %i/%i"%(iEv, totalEvents))
       self.process(ev)
 
   def process(self, ev):
