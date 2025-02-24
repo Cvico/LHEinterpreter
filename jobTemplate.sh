@@ -1,25 +1,37 @@
 #!/bin/bash
+repodir=[REPODIR]
+outdir=[OUTDIR]
+inevents=[INEVENTS]
+gridpack=[GRIDPACK]
 
-cd [PWD]
-mkdir tmp/[MODEL]/
-cd tmp/[MODEL]/
-cp [GRIDPACK] .
-tar -xvf *.tar.xz
-sh runcmsgrid.sh 1 123456 1
+# Move to the output directory
 
-source /cms/cmsset_default.sh
-cd ./CMSSW_9_3_16/src/
-cmsenv
+cd $outdir/tmp
 
-rwgt_dir="[PWD]/tmp/[MODEL]/process/rwgt"
-export PYTHONPATH=$rwgt_dir:$PYTHONPATH
+# Run one event manually to generate the code
+tar -xvf $gridpack
+bash runcmsgrid.sh 1 123456 1
 
-cd [PWD]/tmp/[MODEL]/process/
-cp [EVENTSFILE] [PWD]/tmp/[MODEL]/process/Events/cmsgrid/events.lhe.gz
+export PYTHONPATH=${outdir}/process/rwgt:$PYTHONPATH
 
-echo "0" | ./bin/aMCatNLO reweight cmsgrid 
-cp [PWD]/tmp/[MODEL]/process/Events/cmsgrid/events.lhe.gz [OUTPUT].gz
+# Prepare reweighting
+cd process/
+
+# Now launch a reweighting for each input event
+iev=0
+for event_file in $( ls $inevents/* ); do
+    cp -r Events/cmsgrid Events/cmsgrid_${iev}/
+
+    cp ${event_file} Events/cmsgrid_${iev}/events.lhe.gz
+    iev=$(( $iev + 1 ))
+    
+    # Launch reweight
+    echo "0" | ./bin/aMCatNLO reweight cmsgrid_${iev} 
+
+    # Collect output
+    cp Events/cmsgrid_${iev}/events.lhe.gz $outdir/rwgt_events.chunk${iev}.lhe.gz
+done
 
 # Cleanup
-cd [PWD]
-rm -rf ./tmp/[MODEL]/
+cd $outdir
+rm -rf tmp

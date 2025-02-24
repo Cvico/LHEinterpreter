@@ -1,53 +1,80 @@
 import os
 import sys
 import gzip
+import argparse
+from utils.auxiliars import color_msg
 
-args = sys.argv[:]
-baseInputLHEDir = args[1] # lhe events as obtained from createLHEFormatFromROOTFile.py
-baseGridpack    = args[2] # tar.gz file with the gridpack
-templateRun     = args[3] # a .lhe file containing only the banner and general run settings and handle [[[ PLACE YOUR EVENTS HERE ]]] where events should be
-baseOutputLHEDir= args[4] # output directory
+def add_parsing_options():
+    """ This is a custom parser that allows for passing options to the code """
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--baseInputLHEDir', dest = "baseInputLHEDir", default = None, help = "Directory with the output from createLHEFormatFromROOTFile.py")
+    parser.add_argument('--baseGridpack', dest = "baseGridpack", default = None, help = "Path to the tar.gz file wiht the gridpack. ")
+    parser.add_argument('--templateRun', dest = "templateRun", default = "banner.lhe.gz",  help = "An lhe.gz file containing only the banner and general settings.")
+    parser.add_argument('--baseOutputLHEDir', dest = "baseOutputLHEDir", default = "jobs",  help = "Output where to store each job")
+    return parser.parse_args()
 
-xMatch = "qwueihdsfjqwbekqwegqwygoifzhkldbflkdsfqwerqew" #In case we want to supress any production
-if len(args) >= 6:
-  xMatch = args[5]
 
-newOnly = True
+if __name__ == "__main__":
+    
+    opts = add_parsing_options()
+    baseInputLHEDir = opts.baseInputLHEDir  # lhe events as obtained from createLHEFormatFromROOTFile.py
+    baseGridpack    = opts.baseGridpack     # tar.gz file with the gridpack
+    templateRun     = opts.templateRun      # a .lhe file containing only the banner and general run settings and handle where events should be
+    baseOutputLHEDir = opts.baseOutputLHEDir # output directory
 
-#Read empty lhe file
-inBase = gzip.open(templateRun,"r")
-baseHeader = inBase.read()
-inBase.close()
-iJob = 0
+    newOnly = True
 
-#Loop over the chunks to process
-for f in os.listdir(baseInputLHEDir):
-  print(f)
-  if not "lhe" in f: continue
-  if xMatch in f: print("Skip %s"%f); continue
-  if newOnly and os.path.isfile(baseOutputLHEDir + "/" + f + ".gz"): continue
-  # Copy the lhe format with the chunks events
-  print("Creating lhe reweighting job for %s"%f)
-  short = f.replace("lhe","")
-  inEvFile = open(baseInputLHEDir + "/" + f,"rb")
-  inEvents = inEvFile.read()
-  outEvents = gzip.open(os.path.dirname(os.path.realpath(__file__)) + "/tmp/"+ short + ".lhe.gz","wb") 
-  outHeader= baseHeader.replace(b"[[[ PLACE YOUR EVENTS HERE ]]]", inEvents)
-  outEvents.write(outHeader)
-  outEvents.close()
-  inEvFile.close()
-  # Now create the job executable
-  output = baseOutputLHEDir + "/" + f
-  jobTemplate = open("jobTemplate.sh", "rb")
-  jobInText = jobTemplate.read()
-  jobTemplate.close()
-  newjob = open("jobs/_%i.sh"%iJob, "wb")
-  jobtext = jobInText.replace(b"[PWD]", os.path.dirname(os.path.realpath(__file__)).encode())
-  jobtext = jobtext.replace(b"[MODEL]", f.encode())
-  jobtext = jobtext.replace(b"[GRIDPACK]", baseGridpack.encode())
-  eventsfile = os.path.dirname(os.path.realpath(__file__)) + "/tmp/" + short + ".lhe.gz"
-  jobtext = jobtext.replace(b"[EVENTSFILE]", eventsfile.encode())
-  jobtext = jobtext.replace(b"[OUTPUT]", output.encode() )
-  newjob.write( jobtext )
-  newjob.close()
-  iJob +=1
+    # Read empty lhe file
+    inBase = gzip.open( templateRun, "r" )
+    baseHeader = inBase.read()
+    inBase.close()
+    
+    
+    iJob = 0
+    maindir = os.path.dirname(os.path.realpath(__file__))
+    
+    # Get a list of LHE files
+    lhefiles = [ _file for _file in os.listdir( baseInputLHEDir ) if ".lhe" in _file ]
+    # Loop over the chunks to process
+    for ifile, _file in enumerate(lhefiles):
+        
+        color_msg( f"Creating job for file {_file}", color = "green", indentlevel = 0)
+        
+        short = _file.replace( ".lhe", "" )
+        
+        # Create a temporary directory
+        eventsDir = baseOutputLHEDir + f"/unrwgt_events/"
+        
+        if not os.path.exists( eventsDir ):
+            os.system(f"mkdir -p {eventsDir} ")
+        
+        tmpdir = f"{baseOutputLHEDir}/tmp"
+        if not os.path.exists( tmpdir ):
+            os.system(f"mkdir -p {tmpdir} ")
+        
+        
+        # Copy the events form the previous step in the unwgt_events folder
+        inEvFile = open(baseInputLHEDir + "/" + _file, "rb")
+        inEvents = inEvFile.read()
+        
+        inEvents_withBanner_name =  f"{eventsDir}/events.chunk{ifile}.lhe.gz"
+        inEvents_withBanner = gzip.open( inEvents_withBanner_name , "wb") 
+        header = baseHeader.replace(b"[[[ PLACE YOUR EVENTS HERE ]]]", inEvents)
+        inEvents_withBanner.write(header)
+        inEvents_withBanner.close()
+        inEvFile.close()
+        
+        # Now create the job executable
+        jobTemplate = open( f"{maindir}/jobTemplate.sh", "rb" )
+        jobInText = jobTemplate.read()
+        jobTemplate.close()
+        newjob = open( f"{tmpdir}/job.sh", "wb")
+        
+        jobtext = jobInText.replace(b"[REPODIR]", maindir.encode())
+        jobtext = jobtext.replace(b"[GRIDPACK]", f"{maindir}/{baseGridpack}".encode())
+        jobtext = jobtext.replace(b"[INEVENTS]", f"{maindir}/{eventsDir}".encode())        
+        jobtext = jobtext.replace(b"[OUTDIR]", f"{maindir}/{baseOutputLHEDir}".encode() )
+        
+        newjob.write( jobtext )
+        newjob.close()
+        iJob +=1
