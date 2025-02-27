@@ -22,7 +22,7 @@ iev=0
 for event_file in $( ls $inevents/* ); do
     cp -r Events/cmsgrid Events/cmsgrid_${iev}/
 
-    cp ${event_file} Events/cmsgrid_${iev}/events.lhe.gz
+    cp ${inevents}/${event_file} Events/cmsgrid_${iev}/events.lhe.gz
     iev=$(( $iev + 1 ))
     
     # Launch reweight

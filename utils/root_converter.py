@@ -48,7 +48,6 @@ class LHEToRootConversor(object):
 
         # This is the insideloop function
         self.getEvents()
-        self.sf.cd()
     
         # Write and close
         self.outputTree.Write()

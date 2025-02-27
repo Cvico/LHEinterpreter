@@ -25,7 +25,7 @@ if __name__ == "__main__":
     theFile = infile,
     theTree = "Events",
     outfolder = outfolder,
-    undoDecays = [ -24, 24, 23 ],
+    undoDecays = [],
     nchunks = nchunks, 
     maxEvents = maxEvents,
     prDict = { str(i) : i for i in range(1000) }

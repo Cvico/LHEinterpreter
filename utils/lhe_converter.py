@@ -120,12 +120,14 @@ class LHEPrinter(object):
         # Then we need to treat the whole thing to undo the madspin decays, update statuses and rewrite particle order
         lhepart = []
         deletedIndexes = []
+
         for i in range( getattr(ev, "nLHEPart") ):
             testPart = HEPPart(ev, i)
+            print( i, testPart.mother1, testPart.mother2 ) 
             testPart.mother1 = testPart.mother1 - sum([1*(testPart.mother1 > d) for d in deletedIndexes])
             testPart.mother2 = testPart.mother2 - sum([1*(testPart.mother2 > d) for d in deletedIndexes])
             if testPart.mother1 != 0:
-                if abs( lhepart[testPart.mother1-1].pdgId ) in self.undoDecays: #If it is from something that decays after weighting just skip it
+                if abs( lhepart[ testPart.mother1-1 ].pdgId ) in self.undoDecays: #If it is from something that decays after weighting just skip it
                     deletedIndexes.append(i)
                     continue
             if abs( testPart.pdgId ) in self.undoDecays: # If it is something that decays after weighting, change status
